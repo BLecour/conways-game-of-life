@@ -148,9 +148,19 @@ def draw_play_pause_button():
 
     screen.blit(text_surf, text_rect)
 
+
+device = wp.get_preferred_device()
 wp.init()
+if len(sys.argv) == 2 and int(sys.argv[1]) <= 60 and int(sys.argv[1]) >= 1:
+    fps = float(sys.argv[1])
+else:
+    fps = 30
+print(f"FPS set to {fps}")
+timer_limit = 1.0 / fps
+timer = 0.0
 
 while True:
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -215,38 +225,44 @@ while True:
                 last_mouse = mouse_pos
 
     if running_simulation:
-        if cells:
-            x, y = zip(*cells)
-            min_x = min(x)
-            min_y = min(y)
-            max_x = max(x)
-            max_y = max(y)
-            x_len = max_x - min_x + 3
-            y_len = max_y - min_y + 3
-            print(x_len, y_len)
-            cell_bools = [[False]*y_len for i in range(x_len)]
-            cell_bools = np.full(shape=(x_len, y_len), fill_value=False, dtype=wp.bool)
-            for cell in cells:
-                cell_bools[cell[0]-min_x+1][cell[1]-min_y+1] = True
-            input_array = wp.array(cell_bools, shape=(x_len, y_len), dtype=wp.bool)
-            output_array = wp.full(value=False, shape=(x_len, y_len), dtype=wp.bool)
-            wp.launch(
-                kernel=cells_update,
-                dim=(x_len, y_len),
-                inputs=[input_array, output_array, x_len-1, y_len-1],
-                device="cuda"
-            )
-            wp.synchronize()
-            output = output_array.numpy()
-            cells.clear()
-            for i in range(x_len):
-                for j in range(y_len):
-                    if output[i][j]:
-                        cells.append((i+min_x-1, j+min_y-1))
+        # Only update sim timer if the sim is running
+        timer += (clock.tick(60) / 1000.0)
+
+        # Only update sim timer if threshold has been reached
+        # This is what makes it update 'fps' times per second
+        if timer >= timer_limit:
+            timer -= timer_limit
+            if cells:
+                x, y = zip(*cells)
+                min_x = min(x)
+                min_y = min(y)
+                max_x = max(x)
+                max_y = max(y)
+                x_len = max_x - min_x + 3
+                y_len = max_y - min_y + 3
+                cell_bools = [[False]*y_len for i in range(x_len)]
+                cell_bools = np.full(shape=(x_len, y_len), fill_value=False, dtype=wp.bool)
+                for cell in cells:
+                    cell_bools[cell[0]-min_x+1][cell[1]-min_y+1] = True
+                input_array = wp.array(cell_bools, shape=(x_len, y_len), dtype=wp.bool)
+                output_array = wp.full(value=False, shape=(x_len, y_len), dtype=wp.bool)
+                wp.launch(
+                    kernel=cells_update,
+                    dim=(x_len, y_len),
+                    inputs=[input_array, output_array, x_len-1, y_len-1],
+                    device=device
+                )
+                wp.synchronize()
+                output = output_array.numpy()
+                cells.clear()
+                for i in range(x_len):
+                    for j in range(y_len):
+                        if output[i][j]:
+                            cells.append((i+min_x-1, j+min_y-1))
             
 
     screen.fill(BG_COLOR)
     draw_grid()
     draw_play_pause_button()
     pygame.display.flip()
-    clock.tick(30)
+    clock.tick(60)
