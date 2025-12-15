@@ -249,4 +249,4 @@ while True:
     draw_grid()
     draw_play_pause_button()
     pygame.display.flip()
-    clock.tick(2)
+    clock.tick(30)
