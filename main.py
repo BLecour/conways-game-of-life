@@ -41,59 +41,36 @@ def cells_update(input: wp.array(dtype=wp.bool, ndim=2), output: wp.array(dtype=
     x, y = wp.tid()
 
     cell_neighbours = wp.int32(0)
+    top = wp.int32(input[x, y-1])
+    top_right = wp.int32(input[x+1, y-1])
+    right = wp.int32(input[x+1, y])
+    bottom_right = wp.int32(input[x+1, y+1])
+    bottom = wp.int32(input[x, y+1])
+    bottom_left = wp.int32(input[x-1, y+1])
+    left = wp.int32(input[x-1, y])
+    top_left = wp.int32(input[x-1, y-1])
 
     # Handle border cases
     if x == 0:
-        if y == 0:
-            cell_neighbours += wp.int32(input[x+1, y])
-            cell_neighbours += wp.int32(input[x+1, y+1])
-            cell_neighbours += wp.int32(input[x, y+1])
-        elif y == y_len:
-            cell_neighbours += wp.int32(input[x, y-1])
-            cell_neighbours += wp.int32(input[x+1, y-1])
-            cell_neighbours += wp.int32(input[x+1, y])
-        else:
-            cell_neighbours += wp.int32(input[x, y-1])
-            cell_neighbours += wp.int32(input[x+1, y-1])
-            cell_neighbours += wp.int32(input[x+1, y])
-            cell_neighbours += wp.int32(input[x+1, y+1])
-            cell_neighbours += wp.int32(input[x, y+1])
+        if y == 0: # Top left
+            cell_neighbours += right + bottom_right + bottom
+        elif y == y_len: # Bottom left
+            cell_neighbours += top + top_right + right
+        else: # Left
+            cell_neighbours += top + top_right + right + bottom_right + bottom
     elif x == x_len:
-        if y == 0:
-            cell_neighbours += wp.int32(input[x-1, y])
-            cell_neighbours += wp.int32(input[x, y+1])
-            cell_neighbours += wp.int32(input[x-1, y+1])
-        elif y == y_len:
-            cell_neighbours += wp.int32(input[x-1, y])
-            cell_neighbours += wp.int32(input[x, y-1])
-            cell_neighbours += wp.int32(input[x-1, y-1])
-        else:
-            cell_neighbours += wp.int32(input[x-1, y])
-            cell_neighbours += wp.int32(input[x, y+1])
-            cell_neighbours += wp.int32(input[x-1, y+1])
-            cell_neighbours += wp.int32(input[x, y-1])
-            cell_neighbours += wp.int32(input[x-1, y-1])
-    elif y == 0:
-        cell_neighbours += wp.int32(input[x+1, y])
-        cell_neighbours += wp.int32(input[x+1, y+1])
-        cell_neighbours += wp.int32(input[x, y+1])
-        cell_neighbours += wp.int32(input[x-1, y+1])
-        cell_neighbours += wp.int32(input[x-1, y])
-    elif y == y_len:
-        cell_neighbours += wp.int32(input[x, y-1])
-        cell_neighbours += wp.int32(input[x+1, y-1])
-        cell_neighbours += wp.int32(input[x+1, y])
-        cell_neighbours += wp.int32(input[x-1, y])
-        cell_neighbours += wp.int32(input[x-1, y-1])
-    else:
-        cell_neighbours += wp.int32(input[x, y-1])
-        cell_neighbours += wp.int32(input[x+1, y-1])
-        cell_neighbours += wp.int32(input[x+1, y])
-        cell_neighbours += wp.int32(input[x+1, y+1])
-        cell_neighbours += wp.int32(input[x, y+1])
-        cell_neighbours += wp.int32(input[x-1, y+1])
-        cell_neighbours += wp.int32(input[x-1, y])
-        cell_neighbours += wp.int32(input[x-1, y-1])
+        if y == 0: # Top right
+            cell_neighbours += bottom + bottom_left + left
+        elif y == y_len: # Bottom right
+            cell_neighbours += top + left + top_left
+        else: # Right
+            cell_neighbours += top + bottom + bottom_left + left + top_left
+    elif y == 0: # Top
+        cell_neighbours += right + bottom_right + bottom + bottom_left + left
+    elif y == y_len: # Bottom
+        cell_neighbours += top + top_right + right + left + top_left
+    else: # Not an edge
+        cell_neighbours += top + top_right + right + bottom_right + bottom + bottom_left + left + top_left
 
     # Cell rules
     if input[x, y]:
@@ -272,4 +249,4 @@ while True:
     draw_grid()
     draw_play_pause_button()
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(2)
